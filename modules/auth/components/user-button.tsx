@@ -1,53 +1,72 @@
 "use client";
+import dynamic from 'next/dynamic';
 import React from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { LogOut, User } from "lucide-react";
-import LogoutButton from "./logout-button";
-import { useCurrentUser } from "../hooks/use-current-user";
+import { User } from "lucide-react";
 
-const UserButton = () => {
+// Create the actual UserButton component
+const UserButtonComponent = () => {
+  const { useCurrentUser } = require("../hooks/use-current-user");
+  const user = useCurrentUser();
 
-  const user = useCurrentUser()
+  const {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } = require("@/components/ui/dropdown-menu");
+  
+  const { AvatarImage } = require("@/components/ui/avatar");
+  const { LogOut } = require("lucide-react");
+  const LogoutButton = require("./logout-button").default;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
         <div className={cn("relative rounded-full")}>
           <Avatar>
-            <AvatarImage src={user?.image!} alt={user?.name!} />
             <AvatarFallback className="bg-red-500">
               <User className="text-white" />
             </AvatarFallback>
+            {user?.image && (
+              <AvatarImage src={user.image} alt={user?.name || "User"} />
+            )}
           </Avatar>
         </div>
       </DropdownMenuTrigger>
 
-    <DropdownMenuContent className="mr-4">
-      <DropdownMenuItem>
-        <span>
-          {user?.email}
-        </span>
-      </DropdownMenuItem>
-      <DropdownMenuSeparator/>
+      <DropdownMenuContent className="mr-4">
+        <DropdownMenuItem>
+          <span>
+            {user?.email || "Loading..."}
+          </span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator/>
         <LogoutButton>
-            <DropdownMenuItem>
-                <LogOut className="h-4 w-4 mr-2"/>
-                LogOut
-            </DropdownMenuItem>
+          <DropdownMenuItem>
+            <LogOut className="h-4 w-4 mr-2"/>
+            LogOut
+          </DropdownMenuItem>
         </LogoutButton>
-    </DropdownMenuContent>
-
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 };
+
+// Export the dynamic component with no SSR
+const UserButton = dynamic(() => Promise.resolve(UserButtonComponent), {
+  ssr: false,
+  loading: () => (
+    <div className={cn("relative rounded-full")}>
+      <Avatar>
+        <AvatarFallback className="bg-red-500">
+          <User className="text-white" />
+        </AvatarFallback>
+      </Avatar>
+    </div>
+  )
+});
 
 export default UserButton;

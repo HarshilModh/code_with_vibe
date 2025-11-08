@@ -4,13 +4,16 @@ import { db } from "@/lib/db";
 import { currentUser } from "@/modules/auth/actions";
 import { revalidatePath } from "next/cache";
 
-export const toggleStarMarkedPlayground = async (
+export const toggleStarMarked = async (
   playgroundId: string,
   isChecked: boolean
 ) => {
   const user = await currentUser();
   const userId = user?.id;
-  if (!userId) throw new Error("Unauthorized");
+  if (!userId) {
+    throw new Error("User Id is Required");
+  }
+
   try {
     if (isChecked) {
       await db.starMark.create({
@@ -21,21 +24,49 @@ export const toggleStarMarkedPlayground = async (
         },
       });
     } else {
-      await db.starMark.delete({
+        await db.starMark.delete({
         where: {
           userId_playgroundId: {
             userId,
             playgroundId: playgroundId,
+
           },
         },
       });
     }
 
-    revalidatePath("/dashboard");
+     revalidatePath("/dashboard");
     return { success: true, isMarked: isChecked };
   } catch (error) {
-    console.error("Error updating problem:", error);
+       console.error("Error updating problem:", error);
     return { success: false, error: "Failed to update problem" };
+  }
+};
+
+export const getAllPlaygroundForUser = async () => {
+  const user = await currentUser();
+
+  try {
+    const playground = await db.playground.findMany({
+      where: {
+        userId: user?.id,
+      },
+      include: {
+        user: true,
+        starMarks:{
+            where:{
+                userId:user?.id!
+            },
+            select:{
+                isMarked:true
+            }
+        }
+      },
+    });
+
+    return playground;
+  } catch (error) {
+    console.log(error);
   }
 };
 
@@ -45,10 +76,11 @@ export const createPlayground = async (data: {
   description?: string;
 }) => {
   const user = await currentUser();
-  const { title, template, description } = data;
+
+  const { template, title, description } = data;
+
   try {
-    if (!user) throw new Error("Unauthorized");
-    const newPlayground = await db.playground.create({
+    const playground = await db.playground.create({
       data: {
         title: title,
         description: description,
@@ -56,98 +88,67 @@ export const createPlayground = async (data: {
         userId: user?.id!,
       },
     });
-    return newPlayground;
+
+    return playground;
   } catch (error) {
     console.log(error);
-    throw new Error("Failed to create playground");
   }
 };
-export const getAllPlaygroundForUser = async () => {
-  const user = await currentUser();
-  try {
-    if (!user) throw new Error("Unauthorized");
-    const playgrounds = await db.playground.findMany({
-      where: {
-        userId: user?.id!,
-        },
-       include: {
-        user: true,
-        starMarks: {
-            where: {
-                userId: user?.id!
-            },
-            select: {
-                isMarked: true
-            }
-        }
-      },
-    }); 
-    return playgrounds;
-  } catch (error) {
-    console.log(error);
-    throw new Error("Failed to fetch playgrounds");
-  }
-};
+
 export const deleteProjectById = async (id: string) => {
-  const user = await currentUser();
   try {
-    if (!user) throw new Error("Unauthorized");
-    const deletedProject = await db.playground.deleteMany({
+    await db.playground.delete({
       where: {
-        id: id,
-        userId: user?.id!,
+        id,
       },
     });
     revalidatePath("/dashboard");
   } catch (error) {
     console.log(error);
-    throw new Error("Failed to delete project");
   }
 };
+
 export const editProjectById = async (
   id: string,
   data: { title: string; description: string }
 ) => {
-  const user = await currentUser();
   try {
-    if (!user) throw new Error("Unauthorized");
-    const updatedProject = await db.playground.updateMany({
+    await db.playground.update({
       where: {
-        id: id,
-        userId: user?.id!,
+        id,
       },
       data: data,
     });
     revalidatePath("/dashboard");
   } catch (error) {
     console.log(error);
-    throw new Error("Failed to update project");
   }
 };
+
 export const duplicateProjectById = async (id: string) => {
-  const user = await currentUser();
   try {
-    if (!user) throw new Error("Unauthorized");
-    const project = await db.playground.findFirst({
-      where: {
-        id: id,
-        userId: user?.id!,
-      },
+    const originalPlayground = await db.playground.findUnique({
+      where: { id },
+      // todo: add tempalte files
     });
-    if (!project) throw new Error("Project not found");
-    const newProject = await db.playground.create({
+    if (!originalPlayground) {
+      throw new Error("Original playground not found");
+    }
+
+    const duplicatedPlayground = await db.playground.create({
       data: {
-        title: project.title + " (Copy)",
-        description: project.description,
-        template: project.template,
-        userId: project.userId,
-        //todo add template files
+        title: `${originalPlayground.title} (Copy)`,
+        description: originalPlayground.description,
+        template: originalPlayground.template,
+        userId: originalPlayground.userId,
+
+        // todo: add template files
       },
     });
+
     revalidatePath("/dashboard");
-    return newProject;
+    return duplicatedPlayground;
   } catch (error) {
-    console.log(error);
-    throw new Error("Failed to duplicate project");
+    console.error("Error duplicating project:", error);
   }
 };

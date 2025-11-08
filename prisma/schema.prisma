@@ -20,6 +20,7 @@ model User {
   image    String?
   accounts Account[]
   role     UserRole  @default(USER)
+  chatMessages ChatMessage[]
   myPlayground Playground[]  // Note: there's also a typo here - "Plaground" instead of "Playground"
   staredPlayground StarMark[]
   createdAt DateTime @default(now())
@@ -65,7 +66,7 @@ model Playground {
   userId     String
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // templateFiles TemplateFile[]
+  templateFiles TemplateFile[]
 
 }
 
@@ -81,3 +82,23 @@ model StarMark {
 
   @@unique([userId , playgroundId])
 }
+
+model TemplateFile {
+  id  String @id @default(cuid()) @map("_id")
+  content Json
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime @updatedAt
+  playgroundId String @unique
+  playground   Playground @relation(fields: [playgroundId], references: [id], onDelete: Cascade)
+}
+model ChatMessage {
+  id  String @id @default(cuid()) @map("_id")
+  userId String 
+  role   String  // "user" or "assitant"
+  content String
+  createdAt DateTime  @default(now())
+
+  user  User @relation(fields: [userId] , references: [id] , onDelete: Cascade)
+
+  @@index([userId])
+} 

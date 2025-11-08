@@ -4,9 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 
 export default function Home(){
+   
     return(
-      <div className=" z-20 flex flex-col items-center justify-start min-h-screen py-2 mt-10">
       
+<div className="z-20 flex flex-col items-center justify-start min-h-screen py-2 mt-10">      
       <div className="flex flex-col justify-center items-center my-5">
       <Image src={"/hero.svg"} alt="Hero-Section" height={500}  width={500}/>
       
