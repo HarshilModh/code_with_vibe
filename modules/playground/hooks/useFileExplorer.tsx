@@ -10,6 +10,7 @@ interface OpenFile extends TemplateFile {
   hasUnsavedChanges: boolean;
   content: string;
   originalContent: string;
+  path?: string; // Add optional path tracking
 }
 
 interface FileExplorerState {
@@ -91,7 +92,9 @@ export const useFileExplorer = create<FileExplorerState>((set, get) => ({
   setActiveFileId: (fileId) => set({ activeFileId: fileId }),
 
   openFile: (file) => {
-    const fileId = generateFileId(file, get().templateData!);
+    // Rely on the supplied path from the UI instead of generation algorithm if it exists
+    // @ts-ignore
+    const fileId = file.path || generateFileId(file, get().templateData!);
     const { openFiles } = get();
     const existingFile = openFiles.find((f) => f.id === fileId);
 
@@ -183,7 +186,9 @@ export const useFileExplorer = create<FileExplorerState>((set, get) => ({
         await writeFileSync(filePath, newFile.content || "");
       }
 
-      get().openFile(newFile);
+      // Prepare new file with absolute structure path 
+      const fullPath = parentPath ? `${parentPath}/${newFile.filename}.${newFile.fileExtension}` : `${newFile.filename}.${newFile.fileExtension}`;
+      get().openFile({ ...newFile, path: fullPath } as any);
     } catch (error) {
       console.error("Error adding file:", error);
       toast.error("Failed to create file");
@@ -255,9 +260,8 @@ export const useFileExplorer = create<FileExplorerState>((set, get) => ({
           item.fileExtension !== file.fileExtension
       );
 
-      // Find and close the file if it's open
-      // Use the same ID generation logic as in openFile
-      const fileId = generateFileId(file, templateData);
+      // Find and close the file if it's open using strict path string rather than generation
+      const fileId = parentPath ? `${parentPath}/${file.filename}.${file.fileExtension}` : `${file.filename}.${file.fileExtension}`;
       const openFile = openFiles.find((f) => f.id === fileId);
       
       if (openFile) {
@@ -305,9 +309,9 @@ export const useFileExplorer = create<FileExplorerState>((set, get) => ({
       const closeFilesInFolder = (folder: TemplateFolder, currentPath: string = "") => {
         folder.items.forEach((item) => {
           if ("filename" in item) {
-            // Generate the correct file ID using the same logic as openFile
-            const fileId = generateFileId(item, templateData);
-            get().closeFile(fileId);
+            // Generate exactly localized file path mapping 
+            const newPath = currentPath ? `${currentPath}/${item.filename}.${item.fileExtension}` : `${item.filename}.${item.fileExtension}`;
+            get().closeFile(newPath);
           } else if ("folderName" in item) {
             const newPath = currentPath ? `${currentPath}/${item.folderName}` : item.folderName;
             closeFilesInFolder(item, newPath);
@@ -338,10 +342,10 @@ export const useFileExplorer = create<FileExplorerState>((set, get) => ({
     const { templateData, openFiles, activeFileId } = get();
     if (!templateData) return;
 
-    // Generate old and new file IDs using the same logic as openFile
-    const oldFileId = generateFileId(file, templateData);
+    // Accurately map previous bounds
+    const oldFileId = parentPath ? `${parentPath}/${file.filename}.${file.fileExtension}` : `${file.filename}.${file.fileExtension}`;
     const newFile = { ...file, filename: newFilename, fileExtension: newExtension };
-    const newFileId = generateFileId(newFile, templateData);
+    const newFileId = parentPath ? `${parentPath}/${newFilename}.${newExtension}` : `${newFilename}.${newExtension}`;
 
     try {
       const updatedTemplateData = JSON.parse(

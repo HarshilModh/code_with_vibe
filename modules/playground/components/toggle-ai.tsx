@@ -37,6 +37,7 @@ interface ToggleAIProps {
   suggestionLoading: boolean;
   loadingProgress?: number;
   activeFeature?: string;
+  activeFile?: any;
 }
 
 const ToggleAI: React.FC<ToggleAIProps> = ({
@@ -46,6 +47,7 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
   suggestionLoading,
   loadingProgress = 0,
   activeFeature,
+  activeFile,
 }) => {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -170,7 +172,7 @@ const ToggleAI: React.FC<ToggleAIProps> = ({
 <AIChatSidePanel
 isOpen={isChatOpen}
 onClose={() => setIsChatOpen(false)}
-
+activeFile={activeFile}
 />
     </>
   );

@@ -62,7 +62,7 @@ interface ChatMessage {
 interface AIChatSidePanelProps {
     isOpen: boolean;
     onClose: () => void;
-
+    activeFile?: any;
 }
 
 const MessageTypeIndicator: React.FC<{
@@ -111,7 +111,7 @@ const MessageTypeIndicator: React.FC<{
 export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
     isOpen,
     onClose,
-
+    activeFile,
 }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
@@ -179,7 +179,11 @@ export const AIChatSidePanel: React.FC<AIChatSidePanelProps> = ({
     setIsLoading(true);
 
     try {
-      const contextualMessage = getChatModePrompt(chatMode, input.trim());
+      let contextualMessage = getChatModePrompt(chatMode, input.trim());
+      if (activeFile?.content) {
+        const fileNameWithExt = `${activeFile.filename}${activeFile.fileExtension ? "." + activeFile.fileExtension : ""}`;
+        contextualMessage += `\n\n--- Current Active File: ${fileNameWithExt} ---\n\`\`\`${activeFile.fileExtension || ""}\n${activeFile.content}\n\`\`\``;
+      }
 
       const response = await fetch("/api/chat", {
         method: "POST",

@@ -30,7 +30,7 @@ export const saveUpdatedCode = async (playgroundId: string, data: TemplateFolder
     try{
         const playground= await db.templateFile.upsert({
             where: {
-                id: playgroundId
+                playgroundId: playgroundId
             },
             update:{
                 content: JSON.stringify(data)
@@ -42,6 +42,7 @@ export const saveUpdatedCode = async (playgroundId: string, data: TemplateFolder
         });
         return playground;
     }catch(err){
-        console.log(err)
+        console.error("Error saving updated code to database:", err);
+        throw new Error("Failed to save updated code to database.");
     }
 }

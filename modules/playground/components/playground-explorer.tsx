@@ -287,7 +287,11 @@ function TemplateNode({
         <div className="flex items-center group">
           <SidebarMenuButton
             isActive={isSelected}
-            onClick={() => onFileSelect?.(file)}
+            onClick={() => {
+              const fullPath = path ? `${path}/${fileName}` : fileName;
+              // @ts-ignore
+              onFileSelect?.({ ...file, path: fullPath });
+            }}
             className="flex-1"
           >
             <File className="h-4 w-4 mr-2 shrink-0" />

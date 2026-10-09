@@ -56,6 +56,8 @@ import { toast } from "sonner";
 const MainPlaygroundPage = () => {
   const { id } = useParams<{ id: string }>();
   const [isPreviewVisible, setIsPreviewVisible] = useState(true);
+  const [isAIToggled, setIsAIToggled] = useState(false);
+  const [isSuggestionLoading, setIsSuggestionLoading] = useState(false);
 
   const { playgroundData, templateData, isLoading, error, saveTemplateData } =
     usePlayground(id);
@@ -186,7 +188,7 @@ const MainPlaygroundPage = () => {
       if (!latestTemplateData) return
 
       try {
-            const filePath = findFilePath(fileToSave, latestTemplateData);
+            const filePath = fileToSave.id;
         if (!filePath) {
           toast.error(
             `Could not find path for file: ${fileToSave.filename}.${fileToSave.fileExtension}`
@@ -199,16 +201,18 @@ const MainPlaygroundPage = () => {
         );
 
         // @ts-ignore
-          const updateFileContent = (items: any[]) =>
+          const updateFileContent = (items: any[], currentPath: string = "") =>
             // @ts-ignore
           items.map((item) => {
             if ("folderName" in item) {
-              return { ...item, items: updateFileContent(item.items) };
-            } else if (
-              item.filename === fileToSave.filename &&
-              item.fileExtension === fileToSave.fileExtension
-            ) {
-              return { ...item, content: fileToSave.content };
+              const newPath = currentPath ? `${currentPath}/${item.folderName}` : item.folderName;
+              return { ...item, items: updateFileContent(item.items, newPath) };
+            } else {
+              const fileName = item.filename + (item.fileExtension ? "." + item.fileExtension : "");
+              const newPath = currentPath ? `${currentPath}/${fileName}` : fileName;
+              if (newPath === fileToSave.id) {
+                return { ...item, content: fileToSave.content };
+              }
             }
             return item;
           });
@@ -225,8 +229,8 @@ const MainPlaygroundPage = () => {
           }
         }
 
-           const newTemplateData = await saveTemplateData(updatedTemplateData);
-        setTemplateData(newTemplateData || updatedTemplateData);
+           await saveTemplateData(updatedTemplateData);
+        setTemplateData(updatedTemplateData);
 // Update open files
         const updatedOpenFiles = openFiles.map((f) =>
           f.id === targetFileId
@@ -407,9 +411,10 @@ const MainPlaygroundPage = () => {
                 </Tooltip>
 
                <ToggleAI
-                isEnabled={false}
-                onToggle={()=>{}}
-                suggestionLoading={false}
+                isEnabled={isAIToggled}
+                onToggle={setIsAIToggled}
+                suggestionLoading={isSuggestionLoading}
+                activeFile={activeFile || null}
                />
 
                 <DropdownMenu>
@@ -492,11 +497,13 @@ const MainPlaygroundPage = () => {
                   >
                     <ResizablePanel defaultSize={isPreviewVisible ? 50 : 100}>
                       <PlaygroundEditor
-                        activeFile={activeFile}
+                        activeFile={activeFile || null}
                         content={activeFile?.content || ""}
                         onContentChange={(value) => 
                           activeFileId && updateFileContent(activeFileId , value)
                         }
+                        isAIToggled={isAIToggled}
+                        onAILoadingChange={setIsSuggestionLoading}
                       />
                     </ResizablePanel>
 
